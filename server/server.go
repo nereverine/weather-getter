@@ -55,7 +55,7 @@ func main() {
 		resp, err := http.Get("http://api.openweathermap.org/data/2.5/weather?q=Leiria&appid=ae5a327a7bae330964b61a4f6e736a1f&units=metric")
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to fetch data from OpenWeather",
+				"error": "Failed to get data",
 			})
 			return
 		}
@@ -64,7 +64,7 @@ func main() {
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to read response body",
+				"error": "Failed to get data",
 			})
 			return
 		}
@@ -87,6 +87,46 @@ func main() {
 		}
 
 		c.JSON(http.StatusOK, results)
+	})
+
+	r.GET("/weatherById/:cityId", func(c *gin.Context) {
+		cityId := c.Param("cityId")
+		apiKey := os.Getenv("API_KEY")
+		url := ""
+
+		switch cityId {
+		case "Leiria":
+			url = "https://api.openweathermap.org/data/3.0/onecall?lat=39.7437902&lon=-8.8071119&appid=" + apiKey + "&units=metric"
+		case "Coimbra":
+			url = "https://api.openweathermap.org/data/3.0/onecall?lat=40.2111931&lon=-8.4294632&appid=" + apiKey + "&units=metric"
+		case "Faro":
+			url = "https://api.openweathermap.org/data/3.0/onecall?lat=37.0162727&lon=-7.9351771&appid=" + apiKey + "&units=metric"
+		case "Lisbon":
+			url = "https://api.openweathermap.org/data/3.0/onecall?lat=38.7077507&lon=-9.1365919&appid=" + apiKey + "&units=metric"
+		case "Porto":
+			url = "https://api.openweathermap.org/data/3.0/onecall?lat=41.1494512&lon=-8.6107884&appid=" + apiKey + "&units=metric"
+		default:
+			url = "No weather data for that city"
+		}
+		resp, err := http.Get(url)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to get data",
+			})
+			return
+		}
+		defer resp.Body.Close()
+
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to get data",
+			})
+			return
+		}
+
+		c.Data(http.StatusOK, "application/json", body)
+
 	})
 
 	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
