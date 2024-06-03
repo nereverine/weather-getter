@@ -8,6 +8,7 @@ import ThermostatIcon from '@mui/icons-material/Thermostat';
 import {BrowserRouter, Link, Route, Routes} from "react-router-dom";
 import WeatherDetails from "./components/WeatherDetails";
 import Main from "./components/Main";
+import '@mantine/charts/styles.css';
 
 
 

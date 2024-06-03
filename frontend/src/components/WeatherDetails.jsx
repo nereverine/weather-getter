@@ -1,7 +1,7 @@
 import {React, useEffect, useState} from "react"
 import ApplicationLogo from "./ApplicationLogo";
 import { useParams } from "react-router-dom";
-import {MantineProvider, Grid, Title, Card, Paper, Text, Button, GridCol, Image, Badge} from "@mantine/core";
+import {MantineProvider, Grid, Title, Card, Paper, Text, Button, GridCol, Image, Badge, Accordion, AccordionControl, AccordionPanel} from "@mantine/core";
 import axios from "axios";
 import UploadIcon from '@mui/icons-material/Upload';
 import DownloadIcon from "@mui/icons-material/Download";
@@ -11,12 +11,18 @@ import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import AirIcon from '@mui/icons-material/Air';
 import ThermostatIcon from '@mui/icons-material/Thermostat';
+import OpacityIcon from '@mui/icons-material/Opacity';
+import { LineChart } from '@mantine/charts';
+import { Line } from "recharts";
 
 
 function WeatherDetails() {
     const {cityName} = useParams(); // receives params of the router
     const [weatherData, setWeatherData] = useState(null)
+    const [forecastItems, setForecastItems] = useState(null) 
 
+
+  
     const getDateHours = (epochTime) => {
         const date = new Date(epochTime*1000);
         return date.getHours()+":"+date.getMinutes()+":"+date.getSeconds()
@@ -64,16 +70,86 @@ function WeatherDetails() {
         }
       }
 
+      function ChartTooltip({ label, payload }) { //Custom tooltip for the chart
+        if (!payload) return null;
+      
+        return (
+          <Paper px="md" py="sm" withBorder shadow="md" radius="md">
+            <Text fw={500} mb={5}>
+              {label}
+            </Text>
+            {payload.map((item) => (
+              <Text key={item.name} c={item.color} fz="sm">
+                {item.name}: {item.value}
+                
+              </Text>
+            ))}
+          </Paper>
+        );
+      }
 
     async function getWeather(){
         try{
           const response = await axios.get("http://localhost:8080/weatherById/"+cityName)
+          response.data.hourly.forEach(hour => { //this is to convert epoch time to hours for the line chart
+            hour.dt = getDateHours(hour.dt)
+            setForecastItems(response.data.daily.map((item) => (
+              <Accordion.Item key={item.dt} value={item.dt.toString()}>
+                <AccordionControl>
+                  <Grid>
+                    <Grid.Col span={4}>
+                    {getDate(item.dt)}
+                    </Grid.Col>
+                    <Grid.Col span={4}>
+                      <Grid>
+                        <Grid.Col span={4}>
+                    <Image 
+                    src={`https://openweathermap.org/img/wn/${item.weather[0].icon}.png`} style={{width:50}}
+                   />
+                   </Grid.Col>
+                   <Grid.Col span={4}>
+                   <ThermostatIcon style={{color:"lightblue"}}/>{Math.round(item.temp.min)}ºC
+                   </Grid.Col>
+                   <Grid.Col span={4}>
+                    <ThermostatIcon style={{color:"red"}}/>{Math.round(item.temp.max)}ºC
+                   </Grid.Col>
+                   </Grid>
+                    </Grid.Col>
+                    <Grid.Col span={4}>
+                      {item.weather[0].description}
+                    </Grid.Col>
+                  </Grid>
+                   </AccordionControl>
+                   <AccordionPanel>
+                   <Grid>
+              <GridCol span={6}>
+              <OpacityIcon style={{fontSize:30, verticalAlign:"middle"}}/>Humidity: {item.humidity}%
+              </GridCol>
+              <GridCol span={6} >
+              <AirIcon style={{fontSize:30, verticalAlign:"middle"}}/>Wind: {item.wind_speed}m/s {getWindDirection(item.wind_deg)}
+              </GridCol>
+              <GridCol span={6}>
+              <CompressIcon style={{fontSize:30, verticalAlign:"middle"}}/>Pressure: {item.pressure}hPa
+              </GridCol>
+              <GridCol span={6} >
+              <WbSunnyIcon style={{fontSize:30, verticalAlign:"middle"}}/>UV Index: <Badge color={getUVColor(item.uvi)}>{Math.round(item.uvi)}</Badge>
+              </GridCol>
+              <GridCol span={6}>
+              <WaterDropIcon style={{fontSize:30, verticalAlign:"middle"}}/>Dew Point: {item.dew_point}ºC
+              </GridCol>
+            </Grid>
+                   </AccordionPanel>
+              </Accordion.Item>
+            )))
+          }); 
           setWeatherData(response.data)
         }catch(error){
           console.log(error);
           alert("Error loading data")
         }
       }
+
+
 
     useEffect(()=> {
         getWeather();
@@ -147,7 +223,7 @@ return(
             <Paper shadow="xl" withBorder p={10} style={{minHeight:150}}>
             <Grid>
               <GridCol span={6}>
-              <WaterDropIcon style={{fontSize:30, verticalAlign:"middle"}}/>Humidity: {weatherData.current.humidity}%
+              <OpacityIcon style={{fontSize:30, verticalAlign:"middle"}}/>Humidity: {weatherData.current.humidity}%
               </GridCol>
               <GridCol span={6} >
               <AirIcon style={{fontSize:30, verticalAlign:"middle"}}/>Wind: {weatherData.current.wind_speed}m/s {getWindDirection(weatherData.current.wind_deg)}
@@ -161,6 +237,9 @@ return(
               <GridCol span={6} >
               <VisibilityIcon style={{fontSize:30, verticalAlign:"middle"}}/>Visibility: {weatherData.current.visibility/1000}km
               </GridCol>
+              <GridCol span={6}>
+              <WaterDropIcon style={{fontSize:30, verticalAlign:"middle"}}/>Dew Point: {weatherData.current.dew_point}ºC
+              </GridCol>
             </Grid>
             </Paper>
           </Grid.Col>
@@ -169,12 +248,18 @@ return(
         <Grid>
           <Grid.Col span={6}>
             <Paper shadow="xl" withBorder p={10}>
-              <Title order={2}>Hourly</Title>
+              <Title order={2}>Next 2 days</Title>
+              <LineChart data={weatherData.hourly} dataKey="dt" series={[{name:"temp", color:"blue.6"}]} tooltipProps={{
+                content: ({ label, payload }) => <ChartTooltip label={label} payload={payload} />,
+              }} h={350}/>
             </Paper>
           </Grid.Col>
           <Grid.Col span={6}>
           <Paper shadow="xl" withBorder p={10}>
           <Title order={2}>Forecast</Title>
+          <Accordion variant="contained">
+                {forecastItems}
+          </Accordion>
             </Paper>
           </Grid.Col>
         </Grid>
