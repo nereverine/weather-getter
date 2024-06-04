@@ -5,3 +5,7 @@ Main Page
 
 ![Screenshot_4](https://github.com/nereverine/weather-getter/assets/74254439/64dc02f8-9d1d-4cee-92eb-4a5f75b04dae)
 City Details
+
+
+
+<h3>Needs OpenWeather's One Call API 3.0 API Key</h3>
