@@ -6,14 +6,23 @@ import (
 
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/patrickmn/go-cache"
 )
+
+var callCache = cache.New(30*time.Minute, 30*time.Minute) //30 minute cache
 
 func fetchWeather(city string) (map[string]interface{}, error) {
 	apiKey := os.Getenv("API_KEY")
+
+	if cachedData, found := callCache.Get(city); found {
+		return cachedData.(map[string]interface{}), nil
+	}
+
 	url := "http://api.openweathermap.org/data/2.5/weather?q=" + city + "&appid=" + apiKey + "&units=metric"
 	resp, err := http.Get(url)
 	if err != nil {
@@ -31,6 +40,7 @@ func fetchWeather(city string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	callCache.Set(city, jsonResponse, cache.DefaultExpiration)
 	return jsonResponse, nil
 }
 
@@ -45,33 +55,7 @@ func main() {
 		AllowOrigins: []string{"http://localhost:3000"}, //react app
 	}))
 
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"message": "pong",
-		})
-	})
-
-	r.GET("/pingu", func(c *gin.Context) {
-		resp, err := http.Get("http://api.openweathermap.org/data/2.5/weather?q=Leiria&appid=ae5a327a7bae330964b61a4f6e736a1f&units=metric")
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to get data",
-			})
-			return
-		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": "Failed to get data",
-			})
-			return
-		}
-
-		c.Data(http.StatusOK, "application/json", body)
-	})
-
+	//Gets data for the main page
 	r.GET("/weathers", func(c *gin.Context) {
 
 		cities := []string{"Lisbon", "Leiria", "Coimbra", "Porto", "Faro"}
@@ -89,6 +73,7 @@ func main() {
 		c.JSON(http.StatusOK, results)
 	})
 
+	//Gets detailed weather data for the selected city in the main page
 	r.GET("/weatherById/:cityId", func(c *gin.Context) {
 		cityId := c.Param("cityId")
 		apiKey := os.Getenv("API_KEY")

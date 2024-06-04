@@ -1,14 +1,13 @@
 import React from "react";
 import { Title } from "@mantine/core";
+import { Link } from "react-router-dom";
 
 function ApplicationLogo() {
     return (
-      <main>
-        <a href="/">
-        <Title order={1} style={{display:"flex", justifyContent:"center", backgroundColor:"gray"}}>
+      <main style={{display:"flex", justifyContent:"center", backgroundColor:"gray"}}>     
+        <Title component={Link} to="/" order={1}>
             Weather Getter
         </Title>
-        </a>
       </main>
     );
   }
